@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kalória napló</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* VOICE: practical daily tool, friendly, no fuss
+   IDEA: a pizzeria menu card turned into a ledger: bold condensed lettering, paprika field
+   PICTURE: the day's balance, huge, on the paprika band with intake vs burn bars
+   COLOUR and TYPE: paprika red field, ink, egg-yolk accent; Barlow Condensed + Inter
+   LAYOUT: tabs, balance band, macro meters, then inputs in one calm column */
+:root{color-scheme:light dark;--bg:light-dark(#fbf7f2,#16110e);--ink:light-dark(#1d1613,#f3ece5);--card:light-dark(#fff,#211a16);--line:light-dark(#e7ddd2,#3a2f29);--mute:light-dark(#6f645b,#ab9e93);--red:light-dark(#d23a21,#c7412a);--yolk:#f2b632;--yolkbg:light-dark(#fbe5ad,#5a4415)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Inter,system-ui,sans-serif;overflow-x:clip}
+h1,h2,.big,.tab{font-family:"Barlow Condensed",Impact,sans-serif;font-weight:700;letter-spacing:.01em}
+.wrap{max-width:760px;margin:0 auto;padding:0 16px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 0;flex-wrap:wrap}
+h1{margin:0;font-size:32px;line-height:1.05;color:var(--red)}
+nav{display:flex;gap:4px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:4px}
+.tab{border:0;background:none;color:var(--ink);font-size:18px;padding:8px 16px;border-radius:999px;min-height:40px;cursor:pointer}
+.tab[aria-selected=true]{background:var(--ink);color:var(--bg)}
+.band{background:var(--red);color:#fff;padding:20px 0 24px}
+.dnav{display:flex;align-items:center;gap:8px}
+.dnav button,.btn{min-height:44px;min-width:44px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:600 15px Inter,sans-serif;padding:0 14px;cursor:pointer}
+.band .dnav button{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.3);color:#fff}
+.dlabel{flex:1;text-align:center;font-weight:600;position:relative}
+.dlabel input{position:absolute;inset:0;opacity:0;width:100%;cursor:pointer}
+.big{font-size:clamp(64px,18vw,112px);line-height:.95;margin:14px 0 2px;white-space:nowrap}
+.sub{opacity:.85;font-size:15px}
+.bars{margin-top:16px;display:grid;gap:8px}
+.bar{display:grid;grid-template-columns:5.5em 1fr 5em;align-items:center;gap:10px;font-size:15px}
+.bar i{display:block;height:14px;border-radius:7px;background:rgba(255,255,255,.95);transition:width .4s}
+.bar i.b{background:var(--yolk)}
+.bar b{text-align:right;white-space:nowrap}
+section{padding:22px 0 4px}
+h2{font-size:26px;margin:0 0 10px;line-height:1.05;display:flex;justify-content:space-between;align-items:baseline}
+h2 small{font:500 15px Inter,sans-serif;color:var(--mute)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:6px 14px}
+.row{display:grid;grid-template-columns:minmax(0,1fr) 7.5em auto;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+.row.nb{grid-template-columns:minmax(0,1fr) 7.5em}
+.row label{font-weight:500}
+.row .note{grid-column:1/-1;margin-top:-2px}
+input,textarea,select{font:16px Inter,sans-serif;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;width:100%;min-height:44px}
+input[type=number]{text-align:right}
+.note input{font-size:14px;min-height:36px;padding:6px 10px;background:transparent;border-style:dashed}
+:focus-visible{outline:3px solid var(--yolk);outline-offset:2px}
+.ai{min-width:44px;min-height:44px;border-radius:10px;border:1px solid var(--line);background:var(--yolkbg);color:var(--ink);cursor:pointer;font-size:18px}
+.tot{display:flex;justify-content:space-between;padding:10px 0;font-weight:600}
+.meters{display:grid;gap:12px;grid-template-columns:repeat(2,minmax(0,1fr))}
+.m{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 14px}
+.m .t{display:flex;justify-content:space-between;font-size:14px;color:var(--mute)}
+.m .v{font:700 30px "Barlow Condensed",sans-serif;line-height:1.1;white-space:nowrap}
+.trk{position:relative;height:10px;border-radius:5px;background:var(--line);margin:6px 0 4px;overflow:hidden}
+.trk .z{position:absolute;top:0;bottom:0;background:var(--yolk);opacity:.55}
+.trk .f{position:absolute;left:0;top:3px;height:4px;border-radius:2px;background:var(--ink)}
+.st{font-size:13px;color:var(--mute)}.st.ok{color:var(--ink);font-weight:600}
+.banner{background:var(--yolkbg);border-radius:16px;padding:14px;margin-top:18px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.btn.p{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chart{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;height:220px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:10px}
+.col{display:grid;grid-template-rows:16px 1fr 1fr 18px;text-align:center;font-size:12px;cursor:pointer;border-radius:8px}
+.col .up,.col .dn{position:relative}.col .up{border-bottom:1px solid var(--mute)}
+.col .up i,.col .dn i{position:absolute;left:18%;right:18%;border-radius:4px}
+.col .up i{bottom:0;background:var(--red)}.col .dn i{top:0;background:var(--ink)}
+.col.sel{background:var(--yolkbg)}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th,td{padding:9px 6px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}th{font-weight:500;color:var(--mute);font-size:13px}
+tbody tr{cursor:pointer}tfoot td{font-weight:600;border-bottom:0}
+.scroll{overflow-x:auto}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.fld label{display:block;font-size:14px;color:var(--mute);margin-bottom:4px}
+.foot{color:var(--mute);font-size:13px;padding:28px 0 40px;text-align:center}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center;z-index:9}
+.ov.on{display:flex}
+.sheet{background:var(--bg);width:min(560px,100%);border-radius:20px 20px 0 0;padding:18px 16px 24px;max-height:92vh;overflow:auto}
+.res{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin-top:12px}
+.res .k{font:700 40px "Barlow Condensed",sans-serif}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}.chips span{background:var(--yolkbg);border-radius:999px;padding:3px 10px;font-size:14px;white-space:nowrap}
+.hide{display:none!important}
+@media(max-width:520px){.meters,.grid2{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.row{grid-template-columns:minmax(0,1fr) 6.5em auto}.row.nb{grid-template-columns:minmax(0,1fr) 6.5em}.tab{padding:8px 12px}}
+@media(prefers-reduced-motion:reduce){.bar i{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap"><header><h1>Kalória napló</h1>
+<nav role="tablist"><button class="tab" data-v="nap" aria-selected="true">Nap</button><button class="tab" data-v="het" aria-selected="false">Hét</button><button class="tab" data-v="beal" aria-selected="false">Beállítások</button></nav></header></div>
+
+<div id="vNap">
+ <div class="band"><div class="wrap">
+  <div class="dnav"><button id="prev" aria-label="Előző nap">‹</button><div class="dlabel"><span id="dtxt"></span><input type="date" id="dpick" aria-label="Dátum választása"></div><button id="next" aria-label="Következő nap">›</button><button id="today">Ma</button></div>
+  <div class="big" id="bal">0</div><div class="sub">napi balance, kcal (bevitel − égetés)</div>
+  <div class="bars"><div class="bar"><span>Bevitel</span><i id="bIn"></i><b id="tIn"></b></div><div class="bar"><span>Égetés</span><i class="b" id="bOut"></i><b id="tOut"></b></div></div>
+ </div></div>
+ <div class="wrap">
+  <div class="banner hide" id="seedBan"><span>Betöltsem a táblázatod eddigi adatait (nov. 24–25.)?</span><button class="btn p" data-seed>Betöltés</button></div>
+  <section><h2>Makrók <small>a referencia-tartományhoz</small></h2><div class="meters" id="meters"></div></section>
+  <section><h2>Étkezések <small id="sIn"></small></h2><div class="card" id="meals"></div></section>
+  <section><h2>Égetés <small id="sOut"></small></h2><div class="card" id="burn"></div></section>
+  <section><h2>Makrók bevitele</h2><div class="card" id="macros"></div></section>
+  <section><h2>Jegyzet</h2><textarea id="dnote" data-f="note" rows="2" placeholder="pl. karfiol leves / erdei gombás rizottó"></textarea></section>
+ </div>
+</div>
+
+<div id="vHet" class="hide"><div class="wrap">
+ <section><div class="dnav"><button id="wprev" aria-label="Előző hét">‹</button><div class="dlabel" id="wtxt"></div><button id="wnext" aria-label="Következő hét">›</button></div></section>
+ <section><h2>Napi balance <small>piros: többlet, sötét: hiány</small></h2><div class="chart" id="chart"></div></section>
+ <section><h2>A hét napjai</h2><div class="card scroll"><table><thead><tr><th>Nap</th><th>Bevitel</th><th>Égetés</th><th>Balance</th><th>F</th><th>CH</th><th>Zs</th></tr></thead><tbody id="wbody"></tbody><tfoot id="wfoot"></tfoot></table></div></section>
+</div></div>
+
+<div id="vBeal" class="hide"><div class="wrap">
+ <section><h2>Alapok</h2><div class="grid2">
+  <div class="fld"><label for="sBase">Alapfelhasználás (kcal/nap)</label><input type="number" id="sBase" data-s="base"></div>
+  <div class="fld"><label for="sStep">kcal lépésenként (becsléshez)</label><input type="number" step="0.001" id="sStep" data-s="stepF"></div>
+ </div></section>
+ <section><h2>Edzések</h2><div class="fld"><label for="sActs">Vesszővel elválasztva</label><input id="sActs" data-s="acts"></div></section>
+ <section><h2>Referencia-tartomány <small>gramm/nap</small></h2><div class="grid2" id="refs"></div></section>
+ <section><h2>Adatok</h2>
+  <div class="dnav" style="flex-wrap:wrap"><button class="btn" data-seed>Táblázat betöltése (nov. 24–25.)</button><button class="btn" id="exp">Minden adat másolása</button></div>
+  <div class="fld" style="margin-top:12px"><label for="impTxt">Korábban másolt adatok visszatöltése</label><textarea id="impTxt" rows="3" placeholder="Illeszd be ide…"></textarea></div>
+  <button class="btn" id="imp" style="margin-top:8px">Visszatöltés</button> <span id="impMsg" class="st"></span>
+ </section>
+</div></div>
+
+<div class="wrap foot" id="status">Betöltés…</div>
+
+<div class="ov" id="ov"><div class="sheet" role="dialog" aria-labelledby="aiT">
+ <h2 id="aiT">Becslés: <span id="aiMeal"></span></h2>
+ <textarea id="aiTxt" rows="3" placeholder="pl. 2 szelet sonkás-tojásos pizza, 32 cm-esből"></textarea>
+ <div class="fld" id="aiImgW" style="margin-top:8px"><label for="aiImg">Fotó (nem kötelező)</label><input type="file" id="aiImg" accept="image/*"></div>
+ <div class="dnav" style="margin-top:10px"><button class="btn p" id="aiGo">Becslés</button><button class="btn" id="aiX">Mégse</button></div>
+ <div id="aiOut"></div>
+</div></div>
+
+<script>
+{
+const MEALS=[['reggeli','Reggeli'],['tizorai','Tízórai'],['ebed','Ebéd'],['uzsonna','Uzsonna'],['vacsora','Vacsora'],['kave','Kávé']];
+const MAC=[['p','Fehérje'],['c','Szénhidrát'],['f','Zsír'],['fib','Rost']];
+const DEF={base:1450,stepF:0.06,acts:['Pilates','Vadászat'],ref:{p:[90,100],c:[135,150],f:[45,50],fib:[25,0]}};
+const SEED={'2026-11-24':{meals:{reggeli:{kcal:260},tizorai:{kcal:0},ebed:{kcal:650},uzsonna:{kcal:430},vacsora:{kcal:170},kave:{kcal:180}},steps:6822,stepsKcal:449,acts:{},base:1450,p:65,c:229,f:50,note:'karfiol leves / erdei gombás rizottó'},
+'2026-11-25':{meals:{reggeli:{kcal:260},tizorai:{kcal:0},ebed:{kcal:650},uzsonna:{kcal:150},vacsora:{kcal:590},kave:{kcal:120}},steps:8347,stepsKcal:448,acts:{Pilates:175},base:1450,p:97,c:158,f:55}};
+const LS='kaloria-naplo-v1';
+let S={settings:structuredClone(DEF),days:{}},cur=new Date(),view='nap',mode='local',col=null,sample=null,aiMeal=null,aiRes=null;
+const timers={};
+const $=s=>document.querySelector(s);
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const n=v=>{const x=parseFloat(String(v??'').replace(',','.'));return isFinite(x)?x:0};
+const has=v=>v!==undefined&&v!==null&&v!=='';
+const fmt=x=>Math.round(x).toLocaleString('hu-HU');
+const sgn=x=>(x>0?'+':x<0?'−':'')+fmt(Math.abs(x));
+const key=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const parse=k=>{const[y,m,d]=k.split('-').map(Number);return new Date(y,m-1,d)};
+const add=(d,x)=>{const r=new Date(d);r.setDate(r.getDate()+x);return r};
+const monday=d=>add(d,-((d.getDay()+6)%7));
+const get=k=>S.days[k]||{meals:{},acts:{}};
+const edit=k=>{const d=S.days[k]||(S.days[k]={meals:{},acts:{}});d.meals=d.meals||{};d.acts=d.acts||{};return d};
+const calc=d=>{const st=S.settings;const intake=MEALS.reduce((a,[m])=>a+n(d.meals?.[m]?.kcal),0);
+ const stepsK=has(d.stepsKcal)?n(d.stepsKcal):Math.round(n(d.steps)*n(st.stepF));
+ const acts=Object.values(d.acts||{}).reduce((a,v)=>a+n(v),0);const base=has(d.base)?n(d.base):n(st.base);
+ const burn=stepsK+acts+base;return{intake,stepsK,acts,base,burn,bal:intake-burn,used:intake>0}};
+
+function saveLocal(){try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){}}
+function persist(id,data){if(mode==='db'&&col){col.doc(id).set(data).catch(e=>{status('Mentési hiba: '+(e&&e.code||'ismeretlen'))})}else saveLocal()}
+function queue(k){clearTimeout(timers[k]);timers[k]=setTimeout(()=>{delete timers[k];persist(k==='settings'?'settings':'d-'+k,k==='settings'?S.settings:{...S.days[k],date:k})},700)}
+function status(t){$('#status').textContent=t}
+
+/* ---------- Nap ---------- */
+function renderForm(){const k=key(cur),d=get(k),st=S.settings;
+ $('#dtxt').textContent=new Intl.DateTimeFormat('hu-HU',{month:'long',day:'numeric',weekday:'long'}).format(cur);$('#dpick').value=k;
+ $('#meals').innerHTML=MEALS.map(([m,l])=>`<div class="row"><label for="m-${m}">${l}</label><input type="number" inputmode="numeric" id="m-${m}" data-f="meal:${m}:kcal" value="${esc(d.meals?.[m]?.kcal)}" placeholder="kcal"><button class="ai${sample?'':' hide'}" data-ai="${m}" aria-label="${l} becslése">✨</button><div class="note"><input data-f="meal:${m}:note" value="${esc(d.meals?.[m]?.note)}" placeholder="mit ettél?" aria-label="${l} jegyzet"></div></div>`).join('');
+ const acts=[...new Set([...(st.acts||[]),...Object.keys(d.acts||{})])];
+ $('#burn').innerHTML=`<div class="row nb"><label for="b-steps">Lépésszám</label><input type="number" inputmode="numeric" id="b-steps" data-f="steps" value="${esc(d.steps)}"></div>
+ <div class="row nb"><label for="b-sk">Lépés kcal <span class="st" id="skHint"></span></label><input type="number" inputmode="numeric" id="b-sk" data-f="stepsKcal" value="${esc(d.stepsKcal)}"></div>
+ ${acts.map((a,i)=>`<div class="row nb"><label for="a-${i}">${esc(a)}</label><input type="number" inputmode="numeric" id="a-${i}" data-f="act:${esc(a)}" value="${esc(d.acts?.[a])}" placeholder="kcal"></div>`).join('')}
+ <div class="row nb"><label for="b-base">Alapfelhasználás</label><input type="number" inputmode="numeric" id="b-base" data-f="base" value="${esc(d.base)}" placeholder="${esc(st.base)}"></div>`;
+ $('#macros').innerHTML=MAC.map(([m,l])=>`<div class="row nb"><label for="x-${m}">${l} (g)</label><input type="number" inputmode="decimal" id="x-${m}" data-f="${m}" value="${esc(d[m])}"></div>`).join('');
+ $('#dnote').value=d.note||'';renderStats()}
+function renderStats(){const d=get(key(cur)),c=calc(d),st=S.settings;
+ $('#bal').textContent=c.used?sgn(c.bal):'–';
+ const mx=Math.max(c.intake,c.burn,1);$('#bIn').style.width=(c.intake/mx*100)+'%';$('#bOut').style.width=(c.burn/mx*100)+'%';
+ $('#tIn').textContent=fmt(c.intake);$('#tOut').textContent=fmt(c.burn);$('#sIn').textContent='össz: '+fmt(c.intake)+' kcal';$('#sOut').textContent='össz: '+fmt(c.burn)+' kcal';
+ const sk=$('#b-sk');if(sk){sk.placeholder=Math.round(n(d.steps)*n(st.stepF))||'kcal';$('#skHint').textContent=has(d.stepsKcal)?'':'(becsült)'}
+ $('#meters').innerHTML=MAC.map(([m,l])=>{const[lo,hi]=st.ref[m]||[0,0],v=n(d[m]),top=Math.max(hi||lo*1.6,v,1)*1.15;
+  const zl=lo/top*100,zw=((hi||top)-lo)/top*100,ok=v>=lo&&(!hi||v<=hi),txt=!has(d[m])?'nincs adat':ok?'célban':v<lo?`még ${fmt(lo-v)} g`:`${fmt(v-hi)} g felette`;
+  return`<div class="m"><div class="t"><span>${l}</span><span>${lo}${hi?'–'+hi:'+'} g</span></div><div class="v">${has(d[m])?fmt(v):'–'} g</div><div class="trk"><span class="z" style="left:${zl}%;width:${zw}%"></span><span class="f" style="width:${Math.min(v/top*100,100)}%"></span></div><div class="st${ok&&has(d[m])?' ok':''}">${txt}</div></div>`}).join('');
+ $('#seedBan').classList.toggle('hide',Object.keys(S.days).some(k=>calc(S.days[k]).used))}
+function onField(e){const t=e.target,f=t.dataset.f;if(!f)return;const k=key(cur),d=edit(k),v=t.type==='number'?(t.value===''?'':n(t.value)):t.value;
+ const p=f.split(':');if(p[0]==='meal'){d.meals[p[1]]={...(d.meals[p[1]]||{}),[p[2]]:v}}else if(p[0]==='act'){d.acts[p.slice(1).join(':')]=v}else d[f]=v;
+ queue(k);renderStats()}
+
+/* ---------- Hét ---------- */
+function renderWeek(){const m=monday(cur),days=[...Array(7)].map((_,i)=>add(m,i)),f=new Intl.DateTimeFormat('hu-HU',{month:'short',day:'numeric'});
+ $('#wtxt').textContent=f.format(days[0])+' – '+f.format(days[6]);
+ const rows=days.map(d=>{const k=key(d),x=get(k);return{d,k,x,c:calc(x)}}),used=rows.filter(r=>r.c.used),mx=Math.max(1,...used.map(r=>Math.abs(r.c.bal)));
+ const wd=['H','K','Sze','Cs','P','Szo','V'];
+ $('#chart').innerHTML=rows.map((r,i)=>{const h=r.c.used?Math.abs(r.c.bal)/mx*100:0;return`<div class="col${r.k===key(cur)?' sel':''}" data-k="${r.k}"><span>${r.c.used?sgn(r.c.bal):''}</span><div class="up">${r.c.bal>0&&r.c.used?`<i style="height:${h}%"></i>`:''}</div><div class="dn">${r.c.bal<=0&&r.c.used?`<i style="height:${h}%"></i>`:''}</div><b>${wd[i]}</b></div>`}).join('');
+ $('#wbody').innerHTML=rows.map((r,i)=>`<tr data-k="${r.k}"><td>${wd[i]} ${r.d.getDate()}.</td>${r.c.used?`<td>${fmt(r.c.intake)}</td><td>${fmt(r.c.burn)}</td><td><b>${sgn(r.c.bal)}</b></td><td>${has(r.x.p)?fmt(r.x.p):''}</td><td>${has(r.x.c)?fmt(r.x.c):''}</td><td>${has(r.x.f)?fmt(r.x.f):''}</td>`:'<td colspan="6" style="text-align:center;color:var(--mute)">–</td>'}</tr>`).join('');
+ const s=k=>used.reduce((a,r)=>a+r.c[k],0),q=k=>used.length?used.reduce((a,r)=>a+n(r.x[k]),0)/used.length:0;
+ $('#wfoot').innerHTML=used.length?`<tr><td>Összesen</td><td>${fmt(s('intake'))}</td><td>${fmt(s('burn'))}</td><td>${sgn(s('bal'))}</td><td colspan="3"></td></tr><tr><td>Átlag/nap</td><td>${fmt(s('intake')/used.length)}</td><td>${fmt(s('burn')/used.length)}</td><td>${sgn(s('bal')/used.length)}</td><td>${fmt(q('p'))}</td><td>${fmt(q('c'))}</td><td>${fmt(q('f'))}</td></tr>`:'<tr><td colspan="7" style="text-align:center;color:var(--mute)">Ezen a héten még nincs adat.</td></tr>'}
+
+/* ---------- Beállítások ---------- */
+function renderSettings(){const st=S.settings;$('#sBase').value=st.base;$('#sStep').value=st.stepF;$('#sActs').value=(st.acts||[]).join(', ');
+ $('#refs').innerHTML=MAC.map(([m,l])=>`<div class="fld"><label>${l}: min – max</label><div class="dnav"><input type="number" data-r="${m}:0" value="${esc(st.ref[m]?.[0])}" aria-label="${l} minimum"><input type="number" data-r="${m}:1" value="${esc(st.ref[m]?.[1]||'')}" placeholder="–" aria-label="${l} maximum"></div></div>`).join('')}
+function onSetting(e){const t=e.target,st=S.settings;if(t.dataset.s==='acts')st.acts=t.value.split(',').map(s=>s.trim()).filter(Boolean);else if(t.dataset.s)st[t.dataset.s]=n(t.value);
+ else if(t.dataset.r){const[m,i]=t.dataset.r.split(':');st.ref[m]=st.ref[m]||[0,0];st.ref[m][+i]=n(t.value)}else return;queue('settings')}
+
+function render(){for(const[v,id]of[['nap','#vNap'],['het','#vHet'],['beal','#vBeal']])$(id).classList.toggle('hide',view!==v);
+ document.querySelectorAll('.tab').forEach(b=>b.setAttribute('aria-selected',b.dataset.v===view));
+ if(view==='nap')renderForm();if(view==='het')renderWeek();if(view==='beal')renderSettings()}
+function go(d){cur=d;render()}
+function seed(){for(const[k,v]of Object.entries(SEED)){S.days[k]={...structuredClone(v),...(S.days[k]&&calc(S.days[k]).used?S.days[k]:{})};persist('d-'+k,{...S.days[k],date:k})}saveLocal();go(parse('2026-11-25'))}
+
+/* ---------- AI becslés ---------- */
+function openAi(m){aiMeal=m;aiRes=null;$('#aiMeal').textContent=MEALS.find(x=>x[0]===m)[1].toLowerCase();$('#aiTxt').value=get(key(cur)).meals?.[m]?.note||'';$('#aiImg').value='';$('#aiOut').innerHTML='';$('#ov').classList.add('on');$('#aiTxt').focus()}
+async function runAi(){const txt=$('#aiTxt').value.trim(),file=$('#aiImg').files[0];if(!txt&&!file){$('#aiOut').innerHTML='<p class="st">Írd le, mit ettél, vagy tölts fel egy fotót.</p>';return}
+ $('#aiOut').innerHTML='<p class="st">Számolok…</p>';$('#aiGo').disabled=true;
+ const prompt=`Táplálkozási szakértő vagy. Becsüld meg ennek az étkezésnek a tápértékét, magyarországi szokásos adagokkal számolva.${file?' A csatolt kép is az ételt mutatja.':''} Csak egy JSON objektumot adj vissza, más szöveget ne: {"nev":"rövid magyar név","kcal":szám,"feherje":gramm,"ch":gramm,"zsir":gramm,"rost":gramm,"megj":"egy rövid magyar mondat a feltételezett adagról"}. Az étkezés leírása: ${txt||'(lásd a képet)'}`;
+ try{const opts={modelTier:'default'};if(file)opts.images=[file];const r=await sample.json(prompt,opts);
+  aiRes={nev:String(r.nev||txt).slice(0,80),kcal:Math.round(n(r.kcal)),p:Math.round(n(r.feherje)),c:Math.round(n(r.ch)),f:Math.round(n(r.zsir)),fib:Math.round(n(r.rost)),megj:String(r.megj||'').slice(0,200)};
+  const o=$('#aiOut');o.innerHTML=`<div class="res"><div class="k"></div><div class="chips"><span></span><span></span><span></span><span></span></div><p class="st"></p><button class="btn p" id="aiAdd">Hozzáadás</button></div>`;
+  o.querySelector('.k').textContent=aiRes.nev+' · '+fmt(aiRes.kcal)+' kcal';const ch=o.querySelectorAll('.chips span');['Fehérje '+aiRes.p+' g','CH '+aiRes.c+' g','Zsír '+aiRes.f+' g','Rost '+aiRes.fib+' g'].forEach((t,i)=>ch[i].textContent=t);o.querySelector('p').textContent=aiRes.megj+' Becslés, nem mért érték.'}
+ catch(e){$('#aiOut').innerHTML='';const p=document.createElement('p');p.className='st';p.textContent=e&&e.code==='rate_limited'?'Túl sok kérés, próbáld újra egy perc múlva.':e&&e.code==='not_granted'?'A becslés nincs engedélyezve.':'Nem sikerült a becslés, próbáld újra.';$('#aiOut').append(p)}
+ $('#aiGo').disabled=false}
+function addAi(){if(!aiRes)return;const k=key(cur),d=edit(k),m=d.meals[aiMeal]||{};const note=m.note&&m.note!==$('#aiTxt').value.trim()?m.note+', '+aiRes.nev:($('#aiTxt').value.trim()||aiRes.nev);
+ d.meals[aiMeal]={...m,kcal:n(m.kcal)+aiRes.kcal,note};for(const x of['p','c','f','fib'])d[x]=n(d[x])+aiRes[x];queue(k);$('#ov').classList.remove('on');renderForm()}
+
+/* ---------- események ---------- */
+document.addEventListener('input',e=>{if(e.target.closest('#vNap'))onField(e);else if(e.target.closest('#vBeal'))onSetting(e)});
+document.addEventListener('click',e=>{const t=e.target.closest('button,[data-k]');if(!t)return;
+ if(t.dataset.v){view=t.dataset.v;render()}else if(t.dataset.k){view='nap';go(parse(t.dataset.k))}else if(t.dataset.ai)openAi(t.dataset.ai);else if(t.hasAttribute('data-seed'))seed();
+ else if(t.id==='prev')go(add(cur,-1));else if(t.id==='next')go(add(cur,1));else if(t.id==='today')go(new Date());else if(t.id==='wprev')go(add(cur,-7));else if(t.id==='wnext')go(add(cur,7));
+ else if(t.id==='aiGo')runAi();else if(t.id==='aiX')$('#ov').classList.remove('on');else if(t.id==='aiAdd')addAi();
+ else if(t.id==='exp'){navigator.clipboard.writeText(JSON.stringify({days:S.days,settings:S.settings})).then(()=>t.textContent='Kimásolva ✓',()=>t.textContent='A másolás nem sikerült')}
+ else if(t.id==='imp'){try{const o=JSON.parse($('#impTxt').value);for(const[k,v]of Object.entries(o.days||{})){if(/^\d{4}-\d\d-\d\d$/.test(k)){S.days[k]=v;persist('d-'+k,{...v,date:k})}}if(o.settings){S.settings={...structuredClone(DEF),...o.settings};persist('settings',S.settings)}saveLocal();$('#impMsg').textContent='Visszatöltve ✓'}catch(_){$('#impMsg').textContent='Hibás formátum.'}}});
+$('#dpick').addEventListener('change',e=>{if(e.target.value)go(parse(e.target.value))});
+$('#ov').addEventListener('click',e=>{if(e.target.id==='ov')$('#ov').classList.remove('on')});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')$('#ov').classList.remove('on')});
+
+/* ---------- indulás ---------- */
+try{const o=JSON.parse(localStorage.getItem(LS)||'null');if(o){S.days=o.days||{};S.settings={...structuredClone(DEF),...o.settings}}}catch(_){}
+render();status('Csak ebben a böngészőben mentve.');
+(async()=>{const use=window.claude&&window.claude.use;if(!use)return;
+ claude.use('sample').then(async s=>{if(!s)return;sample=s;try{const l=await s.limits();if(!l||!l.images)$('#aiImgW').classList.add('hide')}catch(_){$('#aiImgW').classList.add('hide')}if(view==='nap')document.querySelectorAll('.ai').forEach(b=>b.classList.remove('hide'))});
+ const[db,user]=await Promise.all([claude.use('db'),claude.use('user')]);const id=db&&user?await user.id():null;if(!id)return;
+ col=db.collection('data/users/'+id);let first=true;const to=setTimeout(()=>status('A fiókos mentés még nem érhető el – most ebben a böngészőben mentek.'),10000);
+ col.onSnapshot(snap=>{if(snap.metadata.fromCache&&first&&snap.empty)return;clearTimeout(to);mode='db';
+  if(first&&!snap.metadata.fromCache&&snap.empty&&Object.keys(S.days).length){first=false;for(const[k,v]of Object.entries(S.days))persist('d-'+k,{...v,date:k});persist('settings',S.settings);status('Mentve a fiókodba – minden eszközödön elérhető.');return}
+  const days={};let st=null;snap.docs.forEach(d=>{const v=d.data();if(d.id==='settings')st=v;else if(d.id.startsWith('d-'))days[d.id.slice(2)]=structuredClone(v)});
+  for(const k of Object.keys(timers))if(k!=='settings'&&S.days[k])days[k]=S.days[k];
+  S.days=days;if(st&&!timers.settings)S.settings={...structuredClone(DEF),...structuredClone(st)};saveLocal();
+  if(!snap.metadata.fromCache){first=false;status('Mentve a fiókodba – minden eszközödön elérhető.')}
+  const a=document.activeElement;if(!(a&&a.matches('input,textarea')))render();else if(view==='nap')renderStats()},
+ e=>{clearTimeout(to);mode='local';status('A fiókos mentés nem érhető el – ebben a böngészőben mentek.')})})();
+}
+</script>
+</body>
+</html>
